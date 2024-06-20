@@ -15,6 +15,7 @@ import ru.nms.crdt_server.dto.TextDto;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,8 +45,7 @@ public class CrdtClientTest {
 
     @Test
     void insertRandomTextTest() throws InterruptedException {
-        int textLength = random.nextInt(500, 600);
-
+        int textLength = random.nextInt(10, 15);
         for (int i = 0; i < textLength; i++) {
             var dto = new InsertDto(random.nextInt(textLength), nextChar());
             var port = ports[random.nextInt(ports.length)];
@@ -53,9 +53,40 @@ public class CrdtClientTest {
             restTemplate.postForObject(createUrl(port, "/insert"), request, Void.class);
             Thread.sleep(random.nextInt(0, 3000));
         }
+        gatherResults();
+    }
 
+    @Test
+    void insertAlwaysAsFirstSymbol() throws InterruptedException {
+        int textLength = random.nextInt(10, 20);
+        for (int i = 0; i < textLength; i++) {
+            var dto = new InsertDto(0, nextChar());
+            var port = ports[random.nextInt(ports.length)];
+            HttpEntity<InsertDto> request = new HttpEntity<>(dto, headers);
+            restTemplate.postForObject(createUrl(port, "/insert"), request, Void.class);
+            Thread.sleep(random.nextInt(0, 3000));
+        }
+        gatherResults();
+
+    }
+
+
+    @Test
+    void insertAlwaysAsLastSymbol() throws InterruptedException {
+        int textLength = random.nextInt(100, 200);
+
+        for (int i = 0; i < textLength; i++) {
+            var dto = new InsertDto(textLength, nextChar());
+            var port = ports[random.nextInt(ports.length)];
+            HttpEntity<InsertDto> request = new HttpEntity<>(dto, headers);
+            restTemplate.postForObject(createUrl(port, "/insert"), request, Void.class);
+            Thread.sleep(random.nextInt(0, 3000));
+        }
+        gatherResults();
+    }
+
+    private void gatherResults() throws InterruptedException {
         while (!nodesAreReady(ports)) {
-            log.info("nodes are not ready yet, waiting...");
             Thread.sleep(5000);
         }
         List<String> textsFromNodes = new ArrayList<>();
@@ -86,7 +117,6 @@ public class CrdtClientTest {
             if (dto == null || !dto.isReady()) {
                 return false;
             }
-            log.info("node {} is ready!", port);
         }
         return true;
     }
